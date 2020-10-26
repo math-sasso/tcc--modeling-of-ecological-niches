@@ -1,6 +1,9 @@
 from typing import List,Tuple
 import numpy as np
 import os
+import rasterio
+from rasterio.enums import Resampling
+
 
 class Raster_Standards:
   def __init__(self, resolution:float=0.00833333333333,crs:int=4326,no_data_val:float=-9999.0,country_limits:Tuple=(-73.981934,-34.792929, -33.750035, 5.271478)):
