@@ -1,3 +1,4 @@
+
 from typing import List,Tuple
 import numpy as np
 import os
@@ -55,8 +56,8 @@ class Raster_Standards:
 
     
   def _reescale(self,raster_array,raster_object):
-      if not (round(self.raster_standars.resolution,5) == round(raster.meta['transform'][0],5)):
-        aux = self.resolution/actual_grid
+      if not (round(self.resolution,5) == round(raster_object.meta['transform'][0],5)):
+        aux = self.resolution/raster.meta['transform'][0]
         reescale_factor = 1/aux
 
         # resample data to target shape
@@ -74,10 +75,11 @@ class Raster_Standards:
             (raster_array.width / data.shape[-1]),
             (raster_array.height / data.shape[-2])
         )
+        data = data[0]
       else:
         data = raster_array
         transform = raster_object.meta['transform']
-      return data[0],transform
+      return data,transform
 
   def _get_window_from_extent(self,aff):
     col_start, row_start = ~aff * (self.x_min_limit, self.y_max_limit)
@@ -90,7 +92,25 @@ class Raster_Standards:
       raster_array,_ = self._reescale(raster_array,raster)
       return raster_array
 
-  def read_array_standarized(self,raster):
+  def read_array_standarized(self,raster,raster_name):
+      print(f"Reading raster {raster_name}")
+
+      #Check if orientaion from Affine position 4 is negative
+      res_n_s = raster.meta['transform'][4]
+      if res_n_s > 0:
+        raise Exception("Behavior not expected. The North South resolution is excpected to be negative")
+
+      #Checking the number of raster layers 
+      if raster.meta['count']>1:
+        raise Exception("For some reason there are more than one layer in this raster")
+      if raster.meta['count']==0:
+        raise Exception("For some reason this raster is empty")
+
+      #checking crs
+      raster_code = int(raster.crs.data['init'].split(':')[1])
+      if raster_code != self.crs:
+        raise Exception("Sorry,crs from this raster is no EPSG:4326")
+        # raster = raster.to_crs(epsg=self.crs)
 
       #Extraction only the window from Raster Standars Object
       raster_array = raster.read(1,window = self._get_window_from_extent(raster.meta['transform']))
@@ -102,8 +122,19 @@ class Raster_Standards:
 
       #converting nodata valye if necessary
       if raster.nodata != self.no_data_val:
-        raster_array[raster_array==raster.nodata] = self.no_data_val
+        raster_array_final = np.where(raster_array <  self.no_data_val,self.no_data_val, raster_array)
+        del raster_array
+        # raster_array[raster_array==raster.nodata] = self.no_data_val
         print(f"The Raster no data value converted from EPSG {raster.nodata} to EPSG:{self.no_data_val}")
+      else:
+        raster_array_final = np.copy(raster_array)
+        del raster_array
 
-      return raster_array
+
+      #Beeing sure that numpy array will be float32
+      raster_array_final = np.float32(raster_array_final)
+      
+      raster = None
+
+      return raster_array_final
     
