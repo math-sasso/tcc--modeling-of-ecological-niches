@@ -69,7 +69,7 @@ class OneClassSVMModel:
     """ Fitting data with normalized data """
     train_cover_std = (species_bunch['raster_data_train'] - global_mean) / global_std
     train_cover_std[np.isnan(train_cover_std)] = 0 #Nan values comes from std=0 in some variable
-    clf = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.5)
+    clf = svm.OneClassSVM(nu=self.nu, kernel=self.kernel, gamma=self.gamma)
     clf.fit(train_cover_std)
     return clf
   
@@ -143,13 +143,13 @@ class OneClassSVMModel:
     #5 Taking Means and Stds
     global_mean = np.zeros(shape=(0))
     for i in range(stacked_raster_coverages_copy.shape[1]):
-      mean = np.mean(stacked_raster_coverages_copy[:,i][stacked_raster_coverages_copy[:,i]>-9999])
+      mean = np.mean(stacked_raster_coverages_copy[:,i][stacked_raster_coverages_copy[:,i]>self.raster_standards.no_data_val])
       global_mean = np.append(global_mean, mean)
     global_mean = np.float32(global_mean)
     
     global_std = np.zeros(shape=(0))
     for i in range(stacked_raster_coverages_copy.shape[1]):
-      std = np.std(stacked_raster_coverages_copy[:,i][stacked_raster_coverages_copy[:,i]>-9999])
+      std = np.std(stacked_raster_coverages_copy[:,i][stacked_raster_coverages_copy[:,i]> self.raster_standards.no_data_val])
       global_std = np.append(global_std, std)
     global_std = np.float32(global_std)
     
