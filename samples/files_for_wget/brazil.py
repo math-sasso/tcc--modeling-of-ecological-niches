@@ -3,6 +3,7 @@ from osgeo import ogr
 from shapely import wkt
 import geopandas as gpd
 import matplotlib.pyplot as plt
+import pandas as pd
 
 from typing import Tuple
 
@@ -191,4 +192,3 @@ class Brazil:
     plt.xlabel('Longitude [graus]',fontsize=16)
     plt.tight_layout()
     plt.savefig(map_result_path)
-
