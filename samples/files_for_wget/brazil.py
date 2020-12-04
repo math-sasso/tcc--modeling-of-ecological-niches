@@ -4,7 +4,6 @@ from shapely import wkt
 import geopandas as gpd
 import matplotlib.pyplot as plt
 import pandas as pd
-
 from typing import Tuple
 
 
@@ -169,9 +168,11 @@ class Brazil:
 
     self._brazil_country_level_gpd.plot(ax=ax, facecolor='gray')
 
+
+
     if ".csv" in species_presences_path:
       df_species_presences = pd.read_csv(species_presences_path)
-      df_species_presences['geometry'] = df_species_occurrences['geometry'].apply(wkt.loads)
+      df_species_presences['geometry'] = df_species_presences['geometry'].apply(wkt.loads)
       gdf_species_presences = gpd.GeoDataFrame(df_species_presences, crs='epsg:4326')
     elif ".shp" in species_presences_path:
       gdf_species_presences = gpd.read_file(species_presences_path)
