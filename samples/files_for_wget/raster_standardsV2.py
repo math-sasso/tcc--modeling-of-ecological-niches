@@ -3,6 +3,7 @@ import numpy as np
 import os
 import rasterio
 from rasterio.enums import Resampling
+from rasterio.plot import show
 
 
 class Raster_Standards:
@@ -61,6 +62,7 @@ class Raster_Standards:
       self.no_data_val = raster_base_configs['no_data_val'] 
       self.positive_mask_val = raster_base_configs['positive_mask_val']
       self.negative_mask_val = raster_base_configs['positive_mask_val']
+      self.reference_raster = rasterio.open("/content/drive/MyDrive/Mestrado/Deep Learning/Projeto/Data/Standarized_Rasters/Base_Rasters/brazilian_mask_standarized.tif ")
       grids = self._construct_grids()
       self.xgrid = grids[0]
       self.ygrid = grids[1]
@@ -71,8 +73,21 @@ class Raster_Standards:
 
   def _construct_grids(self):
       """Construct the map grid from the batch object"""
-      xgrid = np.arange(self.x_min_limit, self.x_max_limit, self.resolution)
-      ygrid = np.arange(self.y_min_limit, self.y_max_limit, self.resolution)
+      ref_aff = self.reference_raster.meta['transform']
+      ref_width = self.reference_raster.profile['width']
+      ref_heigh = self.reference_raster.profile['height']
+      # X limits
+      x_min_limit = ref_aff[2]
+      x_max_limit = x_min_limit + ref_aff[0]*ref_width
+      # Y limits
+      y_max_limit = ref_aff[5]
+      y_min_limit = y_max_limit + ref_aff[4]*ref_heigh
+
+
+      xgrid = np.arange(x_min_limit, x_max_limit,ref_aff[0])
+      ygrid = np.arange(y_min_limit, y_max_limit, ref_aff[0])
+
+
       return (xgrid,ygrid)
 
 
@@ -104,7 +119,7 @@ class Raster_Standards:
         transform = raster_object.meta['transform']
       return data,transform
 
-  def get_window_from_extent(self,aff):
+  def _get_window_from_extent(self,aff):
     """ Get a portion form a raster array based on the country limits"""
     col_start, row_start = ~aff * (self.x_min_limit, self.y_max_limit)
     col_stop, row_stop = ~aff * (self.x_max_limit, self.y_min_limit)
@@ -112,8 +127,6 @@ class Raster_Standards:
 
   def _read_array_standarized(self,raster,raster_name):
       """ Performs verifications and standarizations for raster arrays """
-
-      print(f"Reading raster {raster_name}")
 
       #1 Check if orientaion from Affine position 4 is negative
       res_n_s = raster.meta['transform'][4]
@@ -133,31 +146,31 @@ class Raster_Standards:
         # raster = raster.to_crs(epsg=self.crs)
 
       #4 Extracting only the window from Raster Standars Object
-      raster_array = raster.read(1,window = self._get_window_from_extent(raster.meta['transform']))
+      raster_array = raster.read(1)
+
 
       #5 Resampling
-      if not (round(self.resolution,5) == round(raster.meta['transform'][0],5)):
-        raster_array = self._reescale(raster_array,raster)
-        print(f"The Raster resolution was converted from {raster.meta['transform'][0]} to {self.resolution}")
+      if not (round(self.reference_raster.meta['transform'][0],5) == round(raster.meta['transform'][0],5)):
+         raise Exception(f"Files are not on the same resolution. That should be {round(self.reference_raster.meta['transform'][0],5)}")
+      
+      #6 converting nodata value if necessary
+      if raster.nodata != self.no_data_val:
+        raise Exception(f"Raster dont have default no data val. That should be {self.no_data_val}")
+
 
       #6 converting nodata value if necessary
       if raster.nodata != self.no_data_val:
-        raster_array_final = np.where(raster_array <  self.no_data_val,self.no_data_val, raster_array)
-        del raster_array
-        # raster_array[raster_array==raster.nodata] = self.no_data_val
-        print(f"The Raster no data value converted from EPSG {raster.nodata} to EPSG:{self.no_data_val}")
-      else:
-        raster_array_final = np.copy(raster_array)
-        del raster_array
-
+        raise Exception(f"Raster dont have default no data val. That should be {self.no_data_val}")
+        
 
       #7 Asserting that numpy array will be float32
-      raster_array_final = np.float32(raster_array_final)
+      if raster.meta['dtype'] != self.reference_raster.meta['dtype']:
+        raise Exception(f"Raster dont have default dtype. That should be {self.reference_raster.meta['dtype']}")
       
       #8 Setting raster to none. The information that matters is the rater aray
       raster = None
 
-      return raster_array_final
+      return raster_array
   
   def get_land_reference_array_mask(self,land_reference_path):
       """ Returns the reference array mask conseidering scales and limits"""
