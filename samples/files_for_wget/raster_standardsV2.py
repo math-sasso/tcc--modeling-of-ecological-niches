@@ -62,7 +62,7 @@ class Raster_Standards:
       self.no_data_val = raster_base_configs['no_data_val'] 
       self.positive_mask_val = raster_base_configs['positive_mask_val']
       self.negative_mask_val = raster_base_configs['positive_mask_val']
-      self.reference_raster = rasterio.open("/content/drive/MyDrive/Mestrado/Deep Learning/Projeto/Data/Standarized_Rasters/Base_Rasters/brazilian_mask_standarized.tif ")
+      self.reference_raster = rasterio.open(raster_base_configs["reference_raster"])
       grids = self._construct_grids()
       self.xgrid = grids[0]
       self.ygrid = grids[1]
